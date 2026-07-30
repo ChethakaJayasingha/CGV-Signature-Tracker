@@ -12,6 +12,10 @@ uses a shape descriptor built for exactly this data:
   2. Size-normalise to a fixed 128x64 template.
   3. Compare templates by Normalised Cross-Correlation (NCC) of the ink shape.
 
+NCC is the primary score. SSIM and ORB are also computed and reported as
+secondary signals for transparency. A candidate that matches none of a
+student's references above the threshold is reported as a mismatch.
+
 OWNER: Recognition & QA Engineer.
 """
 from __future__ import annotations
@@ -22,6 +26,12 @@ import cv2
 import numpy as np
 
 import config
+
+try:
+    from skimage.metrics import structural_similarity as _ssim
+    _HAVE_SSIM = True
+except Exception:  # pragma: no cover - skimage optional at import time
+    _HAVE_SSIM = False
 
 TEMPLATE_SIZE = (128, 64)   # (width, height) of the normalised signature template
 
@@ -89,6 +99,29 @@ def _ncc(a_tmpl: np.ndarray, b_tmpl: np.ndarray) -> float:
     return float((a_tmpl * b_tmpl).sum() / denom)
 
 
+def _ssim_score(a_bin: np.ndarray, b_bin: np.ndarray) -> float:
+    if not _HAVE_SSIM:
+        return 0.0
+    a = cv2.resize(a_bin, TEMPLATE_SIZE, interpolation=cv2.INTER_AREA)
+    b = cv2.resize(b_bin, TEMPLATE_SIZE, interpolation=cv2.INTER_AREA)
+    value = _ssim(a, b)
+    return max(0.0, float(value))
+
+
+def _orb_score(a_bin: np.ndarray, b_bin: np.ndarray) -> float:
+    """Ratio of good ORB matches (often 0 on sparse crops; reported for info)."""
+    orb = cv2.ORB_create(nfeatures=400)
+    ka, da = orb.detectAndCompute(a_bin, None)
+    kb, db = orb.detectAndCompute(b_bin, None)
+    if da is None or db is None or len(ka) == 0 or len(kb) == 0:
+        return 0.0
+    bf = cv2.BFMatcher(cv2.NORM_HAMMING)
+    knn = bf.knnMatch(da, db, k=2)
+    good = sum(1 for pair in knn
+               if len(pair) == 2 and pair[0].distance < 0.75 * pair[1].distance)
+    return good / float(min(len(ka), len(kb)))
+
+
 class SignatureMatcher:
     """Compares signature crops against a student's reference set."""
 
@@ -103,9 +136,13 @@ class SignatureMatcher:
         if ta is None or tb is None:
             return MatchResult(0.0, False, "empty signature (no ink)")
 
-        ncc = _ncc(ta, tb)
+        ncc = _ncc(ta, tb)                       # primary
+        ssim = _ssim_score(ref_bin, cand_bin)    # secondary
+        orb = _orb_score(ref_bin, cand_bin)      # secondary (often 0)
+
+        score = ncc
         return MatchResult(
-            score=round(ncc, 3),
-            is_match=ncc >= self.threshold,
-            detail=f"NCC={ncc:.3f}",
+            score=round(score, 3),
+            is_match=score >= self.threshold,
+            detail=f"NCC={ncc:.3f} SSIM={ssim:.3f} ORB={orb:.3f}",
         )

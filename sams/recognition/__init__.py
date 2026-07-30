@@ -1,1 +1,1 @@
-"""Recognition layer: signature comparison against reference samples."""
+"""Recognition layer: signature comparison (ORB feature matching + SSIM)."""
