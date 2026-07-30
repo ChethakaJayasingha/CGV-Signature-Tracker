@@ -46,3 +46,28 @@ def _tight_crop(binary: np.ndarray) -> np.ndarray | None:
     if len(ys) == 0:
         return None
     return binary[ys.min():ys.max() + 1, xs.min():xs.max() + 1]
+
+
+def _template(binary: np.ndarray) -> np.ndarray | None:
+    """Tight-crop then size-normalise a signature to a fixed template.
+
+    The crop is scaled to fit inside the template while PRESERVING its aspect
+    ratio, and centred on a blank canvas. Preserving aspect ratio is essential:
+    stretching a tight crop to a fixed rectangle would turn any single stroke
+    into a solid filled block and destroy the very shape we want to compare.
+    """
+    crop = _tight_crop(binary)
+    if crop is None or crop.size == 0:
+        return None
+
+    tw, th = TEMPLATE_SIZE                 # target width, height
+    ch, cw = crop.shape
+    scale = min(tw / cw, th / ch)
+    new_w, new_h = max(1, int(round(cw * scale))), max(1, int(round(ch * scale)))
+    resized = cv2.resize(crop, (new_w, new_h), interpolation=cv2.INTER_AREA)
+
+    canvas = np.zeros((th, tw), np.uint8)
+    y0 = (th - new_h) // 2
+    x0 = (tw - new_w) // 2
+    canvas[y0:y0 + new_h, x0:x0 + new_w] = resized
+    return (canvas > 127).astype(np.float32)
