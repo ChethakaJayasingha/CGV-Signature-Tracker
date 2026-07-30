@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Roster for the CGV signing sheets (BSc (Hons) in Software Engineering - 2016.1).
+  Structure follows Figure 1 of the CS402.3 brief, adapted to the real sheets:
+  8-digit student numbers and an added <title> field.
+
+  The order of <student> entries MUST match the top-to-bottom row order on the
+  signing sheet (row 1 -> first student, etc.), because sams.py attributes each
+  detected signature cell to a student by row position.
+-->
+<nsbm>
+  <students>
+    <batches>
+      <batch id="2016.1">
+        <subject code="CS402.3">Computer Graphics and Visualization</subject>
+        <student>
+          <index>10000409</index>
+          <title>Ms</title>
+          <name>M S Dilshanika Perera</name>
+        </student>
+        <student>
+          <index>10009301</index>
+          <title>Mr</title>
+          <name>C W M A Shehan Abeyrathne</name>
+        </student>
+        <student>
+          <index>10009302</index>
+          <title>Mr</title>
+          <name>B A K M Chithrananda</name>
+        </student>
+        <student>
+          <index>10009303</index>
+          <title>Ms</title>
+          <name>W Shashini Minosha De Silva</name>
+        </student>
+        <student>
+          <index>10009304</index>
+          <title>Mr</title>
+          <name>K L Udara Maduranga Liyanage</name>
+        </student>
+        <student>
+          <index>10009306</index>
+          <title>Mr</title>
+          <name>Hansa Anuradha Wickramanayake</name>
+        </student>
+      </batch>
+    </batches>
+  </students>
+</nsbm>
