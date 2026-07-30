@@ -38,3 +38,11 @@ def _to_binary(gray: np.ndarray) -> np.ndarray:
     _, binimg = cv2.threshold(gray, 0, 255,
                               cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
     return binimg
+
+
+def _tight_crop(binary: np.ndarray) -> np.ndarray | None:
+    """Crop to the bounding box of the ink; None if there is no ink."""
+    ys, xs = np.where(binary > 0)
+    if len(ys) == 0:
+        return None
+    return binary[ys.min():ys.max() + 1, xs.min():xs.max() + 1]
