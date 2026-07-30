@@ -21,6 +21,7 @@ OWNER: Recognition & QA Engineer.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 
 import cv2
 import numpy as np
@@ -146,3 +147,21 @@ class SignatureMatcher:
             is_match=score >= self.threshold,
             detail=f"NCC={ncc:.3f} SSIM={ssim:.3f} ORB={orb:.3f}",
         )
+
+    def compare_to_references(self, candidate: np.ndarray,
+                              reference_dir: Path) -> MatchResult:
+        """Compare against every reference image; keep the best score."""
+        refs = sorted(list(reference_dir.glob("*.png")) +
+                      list(reference_dir.glob("*.jpg")))
+        if not refs:
+            return MatchResult(0.0, False, "no reference signatures on file")
+
+        best = MatchResult(0.0, False, "no comparison made")
+        for ref_path in refs:
+            ref_img = cv2.imread(str(ref_path), cv2.IMREAD_GRAYSCALE)
+            if ref_img is None:
+                continue
+            result = self.compare(ref_img, candidate)
+            if result.score > best.score:
+                best = result
+        return best
