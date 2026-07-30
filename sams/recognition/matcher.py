@@ -16,6 +16,12 @@ NCC is the primary score. SSIM and ORB are also computed and reported as
 secondary signals for transparency. A candidate that matches none of a
 student's references above the threshold is reported as a mismatch.
 
+Empirical note (see report): on the five sample sheets, genuine same-student
+pairs score noticeably higher on NCC than different-student pairs, but the
+distributions overlap slightly — signature verification on small phone-photo
+crops is an inherently hard problem, so results are indicative rather than
+definitive.
+
 OWNER: Recognition & QA Engineer.
 """
 from __future__ import annotations
@@ -54,8 +60,19 @@ def _to_binary(gray: np.ndarray) -> np.ndarray:
     Accepts either an already-inverted-binary crop (from the pipeline) or a
     grey reference image loaded from disk.
     """
-    # Otsu-threshold; assume dark ink on light paper -> invert so ink becomes
-    # white.
+    # A blank / near-uniform image has no signature. Return all-black (no ink)
+    # rather than letting Otsu invert a flat image into a fully-white block.
+    if int(gray.max()) - int(gray.min()) < 25:
+        return np.zeros_like(gray)
+
+    # If the image is already a proper 0/255 binary (the pipeline's inverted
+    # crops), keep it as-is. Checking the actual values (not just "few unique
+    # values") avoids misreading a 2-tone GREY image as binary.
+    uniq = set(np.unique(gray).tolist())
+    if uniq.issubset({0, 255}) and 255 in uniq:
+        return gray.copy()
+    # Otherwise Otsu-threshold; assume dark ink on light paper -> invert so ink
+    # becomes white.
     _, binimg = cv2.threshold(gray, 0, 255,
                               cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
     return binimg
