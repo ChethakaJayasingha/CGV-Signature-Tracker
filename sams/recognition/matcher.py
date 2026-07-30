@@ -4,6 +4,14 @@ The goal (the brief's "higher grades" component) is to verify that the mark in a
 signature cell is consistent with a student's known signature, so that a
 different person's signature — or a non-signature mark — can be flagged.
 
+Signature crops from phone photos are small, sparse and binary, which makes
+off-the-shelf feature matching (e.g. ORB) unreliable. This matcher therefore
+uses a shape descriptor built for exactly this data:
+
+  1. Tight-crop the cell to its ink bounding box (removes surrounding whitespace).
+  2. Size-normalise to a fixed 128x64 template.
+  3. Compare templates by Normalised Cross-Correlation (NCC) of the ink shape.
+
 OWNER: Recognition & QA Engineer.
 """
 from __future__ import annotations
@@ -12,6 +20,8 @@ from dataclasses import dataclass
 
 import cv2
 import numpy as np
+
+import config
 
 TEMPLATE_SIZE = (128, 64)   # (width, height) of the normalised signature template
 
@@ -71,3 +81,31 @@ def _template(binary: np.ndarray) -> np.ndarray | None:
     x0 = (tw - new_w) // 2
     canvas[y0:y0 + new_h, x0:x0 + new_w] = resized
     return (canvas > 127).astype(np.float32)
+
+
+def _ncc(a_tmpl: np.ndarray, b_tmpl: np.ndarray) -> float:
+    """Normalised cross-correlation of two ink templates (0..1)."""
+    denom = np.sqrt((a_tmpl ** 2).sum() * (b_tmpl ** 2).sum()) + 1e-6
+    return float((a_tmpl * b_tmpl).sum() / denom)
+
+
+class SignatureMatcher:
+    """Compares signature crops against a student's reference set."""
+
+    def __init__(self, threshold: float | None = None) -> None:
+        self.threshold = threshold if threshold is not None else config.MATCH_THRESHOLD
+
+    def compare(self, reference: np.ndarray, candidate: np.ndarray) -> MatchResult:
+        ref_bin = _to_binary(_to_gray(reference))
+        cand_bin = _to_binary(_to_gray(candidate))
+
+        ta, tb = _template(ref_bin), _template(cand_bin)
+        if ta is None or tb is None:
+            return MatchResult(0.0, False, "empty signature (no ink)")
+
+        ncc = _ncc(ta, tb)
+        return MatchResult(
+            score=round(ncc, 3),
+            is_match=ncc >= self.threshold,
+            detail=f"NCC={ncc:.3f}",
+        )
