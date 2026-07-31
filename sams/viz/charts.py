@@ -5,6 +5,7 @@ Design (following data-viz best practice):
     TIMELINE is the primary form.
   * A headline attendance PERCENTAGE (hero number) answers "how are they doing?"
     at a glance.
+  * A small donut shows the present/absent split.
   * present/absent is a STATUS encoding (not categorical): reserved green/red,
     reinforced with marker SHAPE + hatch so it never relies on colour alone
     (colour-blind safe).
@@ -68,6 +69,20 @@ def render_summary(student: Student, rows: list[dict],
                  color=hero_color, ha="left", va="center")
     ax_hero.text(0.0, 0.12, f"present on {present_count} of {total} sheets",
                  fontsize=11, color=INK, ha="left", va="center")
+
+    # --- Donut: present vs absent split ---------------------------------- #
+    ax_donut = fig.add_subplot(gs[0, 1])
+    absent_count = total - present_count
+    if total:
+        ax_donut.pie(
+            [present_count, absent_count],
+            colors=[PRESENT_COLOR, ABSENT_COLOR],
+            startangle=90, counterclock=False,
+            wedgeprops=dict(width=0.42, edgecolor="white", linewidth=2),
+        )
+    ax_donut.set_title("Present vs Absent", fontsize=10, color=INK)
+    ax_donut.text(0, 0, f"{present_count}/{total}", ha="center", va="center",
+                  fontsize=12, fontweight="bold", color=INK)
 
     fig.savefig(out_path, dpi=130, bbox_inches="tight", facecolor="white")
     if show:
