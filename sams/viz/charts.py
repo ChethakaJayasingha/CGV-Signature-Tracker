@@ -95,6 +95,9 @@ def render_summary(student: Student, rows: list[dict],
         xs = list(range(total))
         ys = [1 if r["present"] else 0 for r in rows]
 
+        # Connecting step line (recessive) to show the sequence.
+        ax_tl.step(xs, ys, where="mid", color=GRID_COLOR, linewidth=2, zorder=1)
+
         for x, y, r in zip(xs, ys, rows):
             present = r["present"]
             ax_tl.scatter(
@@ -104,6 +107,10 @@ def render_summary(student: Student, rows: list[dict],
                 marker="o" if present else "X",   # redundant shape
                 edgecolors="white", linewidths=1.5, zorder=3,
             )
+            ax_tl.annotate("Present" if present else "Absent", (x, y),
+                           textcoords="offset points", xytext=(0, 12),
+                           ha="center", fontsize=8,
+                           color=PRESENT_COLOR if present else ABSENT_COLOR)
 
     ax_tl.set_title("Attendance timeline", fontsize=10, color=INK)
 
