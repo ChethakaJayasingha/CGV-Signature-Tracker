@@ -89,6 +89,24 @@ def render_summary(student: Student, rows: list[dict],
     ax_donut.text(0, 0, f"{present_count}/{total}", ha="center", va="center",
                   fontsize=12, fontweight="bold", color=INK)
 
+    # --- Timeline: present/absent per sheet date ------------------------- #
+    ax_tl = fig.add_subplot(gs[1, :])
+    if total:
+        xs = list(range(total))
+        ys = [1 if r["present"] else 0 for r in rows]
+
+        for x, y, r in zip(xs, ys, rows):
+            present = r["present"]
+            ax_tl.scatter(
+                x, y,
+                s=180,
+                color=PRESENT_COLOR if present else ABSENT_COLOR,
+                marker="o" if present else "X",   # redundant shape
+                edgecolors="white", linewidths=1.5, zorder=3,
+            )
+
+    ax_tl.set_title("Attendance timeline", fontsize=10, color=INK)
+
     fig.savefig(out_path, dpi=130, bbox_inches="tight", facecolor="white")
     if show:
         plt.show()
