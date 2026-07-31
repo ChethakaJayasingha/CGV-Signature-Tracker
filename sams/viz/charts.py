@@ -74,12 +74,17 @@ def render_summary(student: Student, rows: list[dict],
     ax_donut = fig.add_subplot(gs[0, 1])
     absent_count = total - present_count
     if total:
-        ax_donut.pie(
+        wedges, _ = ax_donut.pie(
             [present_count, absent_count],
             colors=[PRESENT_COLOR, ABSENT_COLOR],
             startangle=90, counterclock=False,
             wedgeprops=dict(width=0.42, edgecolor="white", linewidth=2),
         )
+        # Redundant hatch so the split is readable without colour.
+        if wedges:
+            wedges[0].set_hatch("")     # present: solid
+            if len(wedges) > 1:
+                wedges[1].set_hatch("////")  # absent: hatched
     ax_donut.set_title("Present vs Absent", fontsize=10, color=INK)
     ax_donut.text(0, 0, f"{present_count}/{total}", ha="center", va="center",
                   fontsize=12, fontweight="bold", color=INK)
