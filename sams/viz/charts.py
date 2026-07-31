@@ -92,6 +92,9 @@ def render_summary(student: Student, rows: list[dict],
     # --- Timeline: present/absent per sheet date ------------------------- #
     ax_tl = fig.add_subplot(gs[1, :])
     if total:
+        labels = [(_parse_date(r["date"]).strftime("%d %b")
+                   if _parse_date(r["date"]) else (r["filename"] or f"#{i+1}"))
+                  for i, r in enumerate(rows)]
         xs = list(range(total))
         ys = [1 if r["present"] else 0 for r in rows]
 
@@ -112,7 +115,22 @@ def render_summary(student: Student, rows: list[dict],
                            ha="center", fontsize=8,
                            color=PRESENT_COLOR if present else ABSENT_COLOR)
 
+        ax_tl.set_yticks([0, 1])
+        ax_tl.set_yticklabels(["Absent", "Present"])
+        ax_tl.set_ylim(-0.5, 1.5)
+        ax_tl.set_xticks(xs)
+        ax_tl.set_xticklabels(labels)
+        ax_tl.set_xlabel("Signing-sheet date")
+    else:
+        ax_tl.text(0.5, 0.5, "No attendance records for this student yet.",
+                   ha="center", va="center", fontsize=11, color=ABSENT_COLOR)
+        ax_tl.axis("off")
+
     ax_tl.set_title("Attendance timeline", fontsize=10, color=INK)
+    for spine in ("top", "right"):
+        ax_tl.spines[spine].set_visible(False)
+    ax_tl.grid(axis="y", color=GRID_COLOR, linewidth=0.8, alpha=0.6)
+    ax_tl.set_axisbelow(True)
 
     fig.savefig(out_path, dpi=130, bbox_inches="tight", facecolor="white")
     if show:
