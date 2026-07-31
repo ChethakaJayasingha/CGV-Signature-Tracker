@@ -3,6 +3,8 @@
 Design (following data-viz best practice):
   * The data's job is "change of a binary state over time" -> a present/absent
     TIMELINE is the primary form.
+  * A headline attendance PERCENTAGE (hero number) answers "how are they doing?"
+    at a glance.
   * present/absent is a STATUS encoding (not categorical): reserved green/red,
     reinforced with marker SHAPE + hatch so it never relies on colour alone
     (colour-blind safe).
@@ -54,6 +56,18 @@ def render_summary(student: Student, rows: list[dict],
     fig = plt.figure(figsize=(11, 5.5))
     fig.suptitle(f"Attendance Summary — {student.full_name}  ({student.index})",
                  fontsize=14, fontweight="bold", color=INK)
+
+    gs = fig.add_gridspec(2, 2, width_ratios=[2.3, 1], height_ratios=[1, 1.3],
+                          hspace=0.45, wspace=0.3)
+
+    # --- Hero number: attendance percentage ------------------------------ #
+    ax_hero = fig.add_subplot(gs[0, 0])
+    ax_hero.axis("off")
+    hero_color = PRESENT_COLOR if pct >= 50 else ABSENT_COLOR
+    ax_hero.text(0.0, 0.6, f"{pct:.0f}%", fontsize=44, fontweight="bold",
+                 color=hero_color, ha="left", va="center")
+    ax_hero.text(0.0, 0.12, f"present on {present_count} of {total} sheets",
+                 fontsize=11, color=INK, ha="left", va="center")
 
     fig.savefig(out_path, dpi=130, bbox_inches="tight", facecolor="white")
     if show:
