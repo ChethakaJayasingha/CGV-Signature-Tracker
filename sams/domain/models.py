@@ -6,6 +6,7 @@ free __init__/__repr__/__eq__ (helpful in tests).
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import date
 
 
 @dataclass(frozen=True)
@@ -19,3 +20,12 @@ class Student:
     @property
     def full_name(self) -> str:
         return f"{self.title} {self.name}".strip()
+
+
+@dataclass
+class Sheet:
+    """A single signing sheet image and its metadata."""
+
+    filename: str
+    date: date | None = None
+    hall: str | None = None
