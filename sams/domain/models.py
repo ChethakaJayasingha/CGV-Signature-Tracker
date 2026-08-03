@@ -29,3 +29,17 @@ class Sheet:
     filename: str
     date: date | None = None
     hall: str | None = None
+
+
+@dataclass
+class Attendance:
+    """One student's attendance verdict on one sheet."""
+
+    student_index: str
+    sheet_date: date | None
+    present: bool
+    ink_ratio: float = 0.0
+
+    @property
+    def status(self) -> str:
+        return "PRESENT" if self.present else "ABSENT"
