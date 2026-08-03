@@ -37,6 +37,19 @@ class RosterParser:
             raise ValueError(f"No <student> entries found in {xml_path}")
         return students
 
+    @staticmethod
+    def find_student(students: list[Student], index: str) -> Student | None:
+        """Look up a student by index, tolerating short/long forms.
+
+        The CLI is invoked like `infovis.py 001`; real indices are 8 digits.
+        This matches on exact index or on a suffix (so "409" finds "10000409"),
+        which keeps the brief's `001` example working alongside real data.
+        """
+        for s in students:
+            if s.index == index or s.index.endswith(index):
+                return s
+        return None
+
 
 def _text(parent: ET.Element, tag: str, default: str | None = None) -> str | None:
     """Return stripped text of a child tag, or default if missing/empty."""
