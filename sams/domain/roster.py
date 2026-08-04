@@ -1,4 +1,27 @@
-"""Parse the info.xml roster into Student objects."""
+"""Parse the info.xml roster into Student objects.
+
+The XML follows the structure in Figure 1 of the brief, adapted to the real
+signing sheets (8-digit indices + a `title` field):
+
+    <nsbm>
+      <students>
+        <batches>
+          <batch id="2016.1">
+            <subject code="CS402.3">Computer Graphics and Visualization</subject>
+            <student>
+              <index>10000409</index>
+              <title>Ms</title>
+              <name>M S Dilshanika Perera</name>
+            </student>
+            ...
+          </batch>
+        </batches>
+      </students>
+    </nsbm>
+
+The parser is tolerant of the simpler brief-style layout too (no <title>,
+numeric <15> batch tags), so it also accepts the exact Figure 1 example.
+"""
 from __future__ import annotations
 
 import xml.etree.ElementTree as ET
