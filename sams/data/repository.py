@@ -8,7 +8,7 @@ from __future__ import annotations
 import sqlite3
 from datetime import date
 
-from ..domain.models import Student
+from ..domain.models import Attendance, Student
 
 
 class AttendanceRepository:
@@ -48,3 +48,16 @@ class AttendanceRepository:
         row = cur.fetchone()
         self.conn.commit()
         return int(row["id"])
+
+    # ---- attendance ----------------------------------------------------- #
+    def upsert_attendance(self, sheet_id: int, records: list[Attendance]) -> None:
+        self.conn.executemany(
+            """INSERT INTO attendance (student_no, sheet_id, present, ink_ratio)
+               VALUES (?, ?, ?, ?)
+               ON CONFLICT(student_no, sheet_id) DO UPDATE SET
+                   present   = excluded.present,
+                   ink_ratio = excluded.ink_ratio;""",
+            [(a.student_index, sheet_id, int(a.present), a.ink_ratio)
+             for a in records],
+        )
+        self.conn.commit()
