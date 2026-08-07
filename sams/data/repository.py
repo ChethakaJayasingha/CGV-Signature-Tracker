@@ -61,3 +61,41 @@ class AttendanceRepository:
              for a in records],
         )
         self.conn.commit()
+
+    # ---- queries (used by infovis.py) ----------------------------------- #
+    def attendance_for(self, student_no: str) -> list[dict]:
+        """Return a student's attendance across all sheets, oldest first.
+
+        Each dict: {date, present, ink_ratio, filename}.
+        """
+        cur = self.conn.execute(
+            """SELECT s.date AS date, a.present AS present,
+                      a.ink_ratio AS ink_ratio, s.filename AS filename
+               FROM attendance a
+               JOIN sheet s ON s.id = a.sheet_id
+               WHERE a.student_no = ?
+               ORDER BY s.date ASC;""",
+            (student_no,),
+        )
+        return [dict(r) for r in cur.fetchall()]
+
+    def student(self, student_no: str) -> Student | None:
+        cur = self.conn.execute(
+            "SELECT index_no, title, name FROM student WHERE index_no = ?;",
+            (student_no,),
+        )
+        row = cur.fetchone()
+        if row is None:
+            return None
+        return Student(index=row["index_no"], title=row["title"], name=row["name"])
+
+    def resolve_index(self, partial: str) -> str | None:
+        """Resolve a possibly-short index (e.g. '409') to a stored full index."""
+        cur = self.conn.execute(
+            """SELECT index_no FROM student
+               WHERE index_no = ? OR index_no LIKE ?
+               ORDER BY length(index_no) LIMIT 1;""",
+            (partial, f"%{partial}"),
+        )
+        row = cur.fetchone()
+        return row["index_no"] if row else None
