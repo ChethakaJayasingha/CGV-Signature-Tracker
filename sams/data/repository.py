@@ -99,3 +99,37 @@ class AttendanceRepository:
         )
         row = cur.fetchone()
         return row["index_no"] if row else None
+
+    # ---- class-wide reporting ------------------------------------------- #
+    def class_summary(self) -> list[dict]:
+        """Attendance percentage per student across every processed sheet.
+
+        LEFT JOIN from student, so a student who has not appeared on any
+        processed sheet yet still shows up (at 0%) instead of silently
+        vanishing from the class view. Ordered by index so the result keeps
+        the roster's row order.
+
+        Each dict: {index_no, title, name, sheets, present, percentage}.
+        """
+        cur = self.conn.execute(
+            """SELECT s.index_no AS index_no, s.title AS title, s.name AS name,
+                      COUNT(a.id) AS sheets,
+                      COALESCE(SUM(a.present), 0) AS present
+               FROM student s
+               LEFT JOIN attendance a ON a.student_no = s.index_no
+               GROUP BY s.index_no
+               ORDER BY s.index_no ASC;"""
+        )
+        summary: list[dict] = []
+        for row in cur.fetchall():
+            sheets = int(row["sheets"])
+            present = int(row["present"])
+            summary.append({
+                "index_no": row["index_no"],
+                "title": row["title"],
+                "name": row["name"],
+                "sheets": sheets,
+                "present": present,
+                "percentage": round(present / sheets * 100.0, 1) if sheets else 0.0,
+            })
+        return summary
