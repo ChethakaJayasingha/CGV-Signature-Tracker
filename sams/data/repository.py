@@ -5,10 +5,17 @@ rest of the codebase clean (repository pattern → OOP marks).
 """
 from __future__ import annotations
 
+import csv
 import sqlite3
 from datetime import date
+from pathlib import Path
+
+import config
 
 from ..domain.models import Attendance, Student
+
+# Column order of the admin CSV export (also its header row).
+CSV_FIELDS = ["index_no", "title", "name", "sheets", "present", "percentage"]
 
 
 class AttendanceRepository:
@@ -133,3 +140,22 @@ class AttendanceRepository:
                 "percentage": round(present / sheets * 100.0, 1) if sheets else 0.0,
             })
         return summary
+
+    def export_csv(self, out_path: str | Path | None = None) -> Path:
+        """Write the class summary to a CSV admin staff can open in Excel.
+
+        Reuses class_summary() rather than issuing a second query. Defaults to
+        output/reports/attendance_export.csv. The newline="" is the csv
+        module's required idiom — without it Excel shows a blank row between
+        every record on Windows.
+        """
+        if out_path is None:
+            out_path = config.REPORTS_DIR / "attendance_export.csv"
+        path = Path(out_path)
+        path.parent.mkdir(parents=True, exist_ok=True)
+
+        with path.open("w", newline="", encoding="utf-8") as fh:
+            writer = csv.DictWriter(fh, fieldnames=CSV_FIELDS)
+            writer.writeheader()
+            writer.writerows(self.class_summary())
+        return path
