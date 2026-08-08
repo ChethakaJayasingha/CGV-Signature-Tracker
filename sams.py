@@ -1,3 +1,17 @@
+#!/usr/bin/env python
+"""sams.py — Student Attendance Management System entry point.
+
+Usage:
+    python sams.py <sheet_image> <info.xml>
+
+Example (from the brief):
+    python sams.py 10.07.2019.png info.xml
+
+Runs the image-processing pipeline on a signing-sheet photo, decides who is
+present/absent from their signature, and stores the attendance in a local
+SQLite database. Every processing step is printed and its image saved to
+output/steps/ for the report.
+"""
 from __future__ import annotations
 
 import argparse
@@ -20,17 +34,17 @@ def run(image_path: str, xml_path: str) -> int:
     config.ensure_dirs()
     Console.header(f"SAMS — processing {image_path}")
 
-    # 1. Roster 
+    # 1. Roster ---------------------------------------------------------- #
     roster = RosterParser.parse(xml_path)
     Console.info(f"roster: {len(roster)} students from {xml_path}")
 
-    # 2. DB 
+    # 2. DB -------------------------------------------------------------- #
     conn = connect()
     bootstrap(conn)
     repo = AttendanceRepository(conn)
     repo.upsert_students(roster)
 
-    # 3. Pipeline
+    # 3. Pipeline -------------------------------------------------------- #
     sheet_date = date_from_filename(image_path)
     ctx = PipelineContext(source_path=image_path, roster=roster,
                           sheet_date=sheet_date)
@@ -42,7 +56,7 @@ def run(image_path: str, xml_path: str) -> int:
     pipeline = build_default_pipeline()
     pipeline.run(image, ctx)
 
-    # 4. Attribute cells to students (both are top-to-bottom ordered)
+    # 4. Attribute cells to students (both are top-to-bottom ordered) ---- #
     if len(ctx.cells) != len(roster):
         Console.info(f"WARNING: {len(ctx.cells)} cells vs {len(roster)} students "
                      f"— attributing by row order; verify cell extraction.")
@@ -62,7 +76,7 @@ def run(image_path: str, xml_path: str) -> int:
         print(f"  {student.index:>10}  {mark}  ({ratio:.3f})  {student.name}")
     print("  " + "-" * 54)
 
-    # 5. Persist 
+    # 5. Persist --------------------------------------------------------- #
     sheet_id = repo.upsert_sheet(image_path, sheet_date, ctx.hall)
     repo.upsert_attendance(sheet_id, records)
     Console.result(f"stored {len(records)} attendance records "
