@@ -30,6 +30,15 @@ from pathlib import Path
 from .models import Student
 
 
+class RosterError(ValueError):
+    """Raised when info.xml cannot be turned into a usable roster.
+
+    Deliberately subclasses ValueError so callers that already catch
+    ValueError keep working; the distinct type just makes roster problems
+    easy to tell apart from other failures.
+    """
+
+
 class RosterParser:
     """Reads info.xml and returns an ordered list of Student objects.
 
@@ -43,10 +52,18 @@ class RosterParser:
         if not xml_path.exists():
             raise FileNotFoundError(f"info.xml not found: {xml_path}")
 
-        tree = ET.parse(xml_path)
+        try:
+            tree = ET.parse(xml_path)
+        except ET.ParseError as exc:
+            raise RosterError(
+                f"{xml_path} is not well-formed XML: {exc}. Check for an "
+                f"unclosed tag or a stray '&' and re-save the file."
+            ) from exc
         root = tree.getroot()
 
         students: list[Student] = []
+        seen: set[str] = set()
+        duplicates: list[str] = []
         # Find every <student> element anywhere in the tree (robust to the
         # exact nesting of <batches>/<batch>/<15> etc.).
         for node in root.iter("student"):
@@ -54,10 +71,22 @@ class RosterParser:
             name = _text(node, "name")
             title = _text(node, "title", default="")
             if index and name:
+                if index in seen:
+                    duplicates.append(index)
+                else:
+                    seen.add(index)
                 students.append(Student(index=index, title=title, name=name))
 
         if not students:
-            raise ValueError(f"No <student> entries found in {xml_path}")
+            raise RosterError(f"No <student> entries found in {xml_path}")
+        if duplicates:
+            # A repeated index would silently shift every later row, so the
+            # roster→sheet row-order contract breaks. Fail loudly instead.
+            raise RosterError(
+                f"duplicate student index(es) in {xml_path}: "
+                f"{', '.join(sorted(set(duplicates)))}. Each student must "
+                f"appear exactly once — roster order maps to sheet row order."
+            )
         return students
 
     @staticmethod
